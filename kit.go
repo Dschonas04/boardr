@@ -82,6 +82,13 @@ var vorlagenFunktionen = template.FuncMap{
 		return ""
 	},
 	"tag": func(t time.Time) string { return t.Local().Format("02.01.2006") },
+	// feld: Wert für ein datetime-local-Feld.
+	"feld": func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.Local().Format("2006-01-02T15:04")
+	},
 	"seit": func(t time.Time) string {
 		d := time.Since(t)
 		switch {
