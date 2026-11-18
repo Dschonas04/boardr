@@ -2,8 +2,10 @@
 
 Startseite fürs Homelab: alle Dienste als Kacheln, mit Status, Widgets und Suche.
 
-**Stand: Grundgerüst.** Der Server startet und zeigt eine Startseite, die
-Funktionen unten sind geplant.
+**Stand: 0.1.** Boards, Gruppen und Kacheln mit Verwaltung im Browser,
+Statusprüfung (HTTP, TCP) jede Minute mit Verfügbarkeit über 24 Stunden,
+Suche (Taste `/`, Enter öffnet den ersten Treffer), Anmeldung über Keycloak
+oder eigene Konten. Widgets und das Anordnen per Ziehen kommen noch.
 
 ## Geplant
 

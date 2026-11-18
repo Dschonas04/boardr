@@ -1,0 +1,60 @@
+{{define "inhalt"}}
+<div class="leiste"><h1>Verwalten</h1><a class="knopf" href="/sso/konten">Konten</a></div>
+{{$t := .Token}}
+{{range .D.Liste}}
+<div class="karte" style="margin-bottom:16px">
+  <form method="post" action="/verwalten/board" class="leiste" style="margin-bottom:8px">
+    <input type="hidden" name="token" value="{{$t}}"><input type="hidden" name="id" value="{{.ID}}">
+    <input type="text" name="name" value="{{.Name}}" style="max-width:260px;font-weight:600" aria-label="Name des Boards">
+    <input type="number" name="reihe" value="{{.Reihe}}" style="width:80px" title="Reihenfolge" aria-label="Reihenfolge">
+    <button>Speichern</button>
+    <a class="knopf" href="/b/{{.ID}}">Ansehen</a>
+  </form>
+  <form method="post" action="/verwalten/board/{{.ID}}/loeschen" class="inline" data-frage="Board mit allen Gruppen und Kacheln löschen?">
+    <input type="hidden" name="token" value="{{$t}}"><button class="gefahr klein">Board löschen</button>
+  </form>
+  {{range .Gruppen}}
+  <h3>
+    <form method="post" action="/verwalten/gruppe" class="leiste" style="margin:0">
+      <input type="hidden" name="token" value="{{$t}}"><input type="hidden" name="id" value="{{.ID}}">
+      <input type="text" name="name" value="{{.Name}}" style="max-width:220px" aria-label="Name der Gruppe">
+      <input type="number" name="reihe" value="{{.Reihe}}" style="width:80px" title="Reihenfolge" aria-label="Reihenfolge">
+      <button>Speichern</button>
+      <a class="knopf" href="/verwalten/kachel/neu?gruppe={{.ID}}">+ Kachel</a>
+    </form>
+  </h3>
+  {{if .Kacheln}}
+  <table>
+    <tr><th>Kachel</th><th class="weg">Adresse</th><th>Zustand</th><th></th></tr>
+    {{range .Kacheln}}
+    <tr class="zeile">
+      <td><a href="/verwalten/kachel/{{.ID}}">{{.Titel}}</a></td>
+      <td class="weg muted klein">{{.Adresse}}</td>
+      <td>{{if not .Pruefen}}<span class="pille">ohne Prüfung</span>{{else if not .Geprueft}}<span class="pille">wartet</span>{{else if .OK}}<span class="pille gut">{{.MS}} ms</span>{{else}}<span class="pille schlecht">{{.Meldung}}</span>{{end}}</td>
+      <td style="text-align:right">
+        <form method="post" action="/verwalten/kachel/{{.ID}}/loeschen" class="inline" data-frage="Kachel löschen?">
+          <input type="hidden" name="token" value="{{$t}}"><button class="gefahr klein">Löschen</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{end}}
+  <form method="post" action="/verwalten/gruppe/{{.ID}}/loeschen" class="inline" data-frage="Gruppe mit allen Kacheln löschen?" style="display:block;margin-top:6px">
+    <input type="hidden" name="token" value="{{$t}}"><button class="gefahr klein">Gruppe löschen</button>
+  </form>
+  {{end}}
+  <form method="post" action="/verwalten/gruppe" class="leiste" style="margin-top:14px">
+    <input type="hidden" name="token" value="{{$t}}"><input type="hidden" name="board" value="{{.ID}}">
+    <input type="text" name="name" placeholder="Neue Gruppe" style="max-width:220px">
+    <button>Gruppe anlegen</button>
+  </form>
+</div>
+{{end}}
+<form method="post" action="/verwalten/board" class="karte leiste">
+  <input type="hidden" name="token" value="{{$t}}">
+  <input type="text" name="name" placeholder="Neues Board" style="max-width:260px">
+  <button class="primaer">Board anlegen</button>
+</form>
+{{end}}
+{{define "skripte"}}<script src="/statisch/verwalten.js" defer></script>{{end}}

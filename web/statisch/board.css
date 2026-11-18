@@ -1,0 +1,20 @@
+.gruppe h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 26px 0 10px; }
+.kacheln { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.kachel {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; position: relative;
+  background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius);
+  text-decoration: none; transition: border-color .12s, transform .12s;
+}
+.kachel:hover { border-color: var(--muted); transform: translateY(-1px); }
+.symbol {
+  flex: 0 0 38px; height: 38px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--hover); font-weight: 700; font-size: 16px; overflow: hidden;
+}
+.symbol img { width: 28px; height: 28px; object-fit: contain; }
+.text { min-width: 0; display: flex; flex-direction: column; }
+.titel { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unter { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.punkt { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--rand); }
+.punkt.gut { background: var(--gut); }
+.punkt.schlecht { background: var(--schlecht); box-shadow: 0 0 0 3px color-mix(in srgb, var(--schlecht) 25%, transparent); }
+.kachel[hidden], .gruppe[hidden] { display: none; }

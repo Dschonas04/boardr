@@ -1,0 +1,29 @@
+{{define "inhalt"}}
+<div class="leiste">
+  <h1>{{.D.Name}}</h1>
+  {{if .D.Gesamt}}<span class="pille {{if eq .D.Gut .D.Gesamt}}gut{{else}}warn{{end}}" id="summe">{{.D.Gut}} von {{.D.Gesamt}} erreichbar</span>{{end}}
+  <input type="search" id="suche" placeholder="Suchen … ( / )" style="max-width:260px" autocomplete="off">
+</div>
+{{range .D.Gruppen}}{{if .Kacheln}}
+<section class="gruppe">
+  <h2>{{.Name}}</h2>
+  <div class="kacheln">
+    {{range .Kacheln}}
+    <a class="kachel" href="{{.Adresse}}" target="_blank" rel="noopener" data-id="{{.ID}}" data-suche="{{.Titel}} {{.Beschreibung}} {{.Adresse}}">
+      <span class="symbol">{{if .SymbolBild}}<img src="{{.Symbol}}" alt="" loading="lazy">{{else}}{{.Zeichen}}{{end}}</span>
+      <span class="text">
+        <span class="titel">{{.Titel}}</span>
+        <span class="unter">{{if .Beschreibung}}{{.Beschreibung}}{{else}}{{.Adresse}}{{end}}</span>
+      </span>
+      {{if .Pruefen}}<span class="punkt {{if .Geprueft}}{{if .OK}}gut{{else}}schlecht{{end}}{{end}}" title="{{if .Geprueft}}{{.Meldung}}, {{.MS}} ms{{if .Verfuegbar}}, 24 h: {{.Verfuegbar}} %{{end}}{{else}}noch nicht geprüft{{end}}"></span>{{end}}
+    </a>
+    {{end}}
+  </div>
+</section>
+{{end}}{{else}}
+<div class="leer">Noch keine Kacheln. <a href="/verwalten">Jetzt anlegen</a></div>
+{{end}}
+<p class="leer" id="nichts" hidden>Nichts gefunden.</p>
+{{end}}
+{{define "kopfzeilen"}}<link rel="stylesheet" href="/statisch/board.css">{{end}}
+{{define "skripte"}}<script src="/statisch/board.js" defer></script>{{end}}

@@ -1,0 +1,22 @@
+{{define "inhalt"}}
+<h1>{{if .D.K.ID}}Kachel bearbeiten{{else}}Neue Kachel{{end}}</h1>
+<form method="post" action="/verwalten/kachel" class="karte" style="max-width:640px">
+  <input type="hidden" name="token" value="{{.Token}}"><input type="hidden" name="id" value="{{.D.K.ID}}">
+  <label for="gruppe">Gruppe</label>
+  <select id="gruppe" name="gruppe">{{range .D.Gruppen}}<option value="{{.ID}}"{{if eq .ID $.D.K.Gruppe}} selected{{end}}>{{.Name}}</option>{{end}}</select>
+  <div class="feld-reihe">
+    <div><label for="titel">Titel</label><input type="text" id="titel" name="titel" value="{{.D.K.Titel}}" required></div>
+    <div><label for="reihe">Reihenfolge</label><input type="number" id="reihe" name="reihe" value="{{.D.K.Reihe}}"></div>
+  </div>
+  <label for="adresse">Adresse</label>
+  <input type="url" id="adresse" name="adresse" value="{{.D.K.Adresse}}" placeholder="https://10.0.2.7:8300" required>
+  <label for="beschreibung">Beschreibung</label>
+  <input type="text" id="beschreibung" name="beschreibung" value="{{.D.K.Beschreibung}}">
+  <label for="symbol">Symbol: Bildadresse oder ein Zeichen</label>
+  <input type="text" id="symbol" name="symbol" value="{{.D.K.Symbol}}" placeholder="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg">
+  <label><input type="checkbox" name="pruefen" value="ja"{{if .D.K.Pruefen}} checked{{end}}> Erreichbarkeit prüfen</label>
+  <label for="pruef_adresse">Andere Adresse für die Prüfung (optional, auch tcp://host:port)</label>
+  <input type="text" id="pruef_adresse" name="pruef_adresse" value="{{.D.K.PruefAdresse}}">
+  <div class="leiste" style="margin-top:16px"><button class="primaer">Speichern</button><a class="knopf" href="/verwalten">Abbrechen</a></div>
+</form>
+{{end}}

@@ -7,6 +7,8 @@ services:
       BOARDR_DB: postgres://boardr:${DB_KENNWORT}@db:5432/boardr?sslmode=disable
     ports:
       - "8390:8390"
+    volumes:
+      - einstellungen:/einstellungen
     depends_on:
       db:
         condition: service_healthy
@@ -28,3 +30,4 @@ services:
 
 volumes:
   db:
+  einstellungen:
