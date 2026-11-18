@@ -75,7 +75,7 @@ func (a *App) wege() http.Handler {
 // solange noch gar nichts eingerichtet ist.
 func (a *App) angemeldet(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := a.sso.Wer(r); ok || !a.sso.Geschuetzt() {
+		if _, ok := a.sso.Wer(r); ok || (!a.sso.Geschuetzt() && a.sso.EinrichtungErlaubt(w, r)) {
 			h(w, r)
 			return
 		}

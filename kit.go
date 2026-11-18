@@ -230,7 +230,7 @@ func nurAngemeldet(s *SSO, n http.Handler) http.Handler {
 				alsJSON(w, http.StatusUnauthorized, map[string]string{"fehler": "Anmeldung noch nicht eingerichtet"})
 				return
 			}
-			http.Redirect(w, r, "/sso/konten", http.StatusFound)
+			http.Redirect(w, r, "/sso/konten?"+r.URL.RawQuery, http.StatusFound)
 			return
 		}
 		geschuetzt.ServeHTTP(w, r)

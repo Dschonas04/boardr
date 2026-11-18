@@ -201,6 +201,11 @@ func TestSSOSitzungVerfaellt(t *testing.T) {
 		t.Fatal("Sitzung überlebt geänderte Freigabe")
 	}
 	s.k.Erlaubt = ""
+	s.k.Aktiv = false
+	if _, ok := s.Wer(r); ok {
+		t.Fatal("Sitzung überlebt abgeschaltetes SSO")
+	}
+	s.k.Aktiv = true
 	s.k.ClientID = "andere"
 	if _, ok := s.Wer(r); ok {
 		t.Fatal("Sitzung überlebt anderen Client")

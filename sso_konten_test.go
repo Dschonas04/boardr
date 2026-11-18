@@ -50,7 +50,12 @@ func TestSSOKonten(t *testing.T) {
 	}
 
 	// Das erste Konto schaltet die Sperre ein und meldet gleich an.
-	res, err := c.PostForm(app.URL+"/sso/konten", url.Values{"name": {"Jonas"}, "passwort": {"geheim123"}, "wiederholung": {"geheim123"}})
+	// Ohne den Einrichtungscode aus dem Log legt niemand das erste Konto an.
+	konto := url.Values{"name": {"Jonas"}, "passwort": {"geheim123"}, "wiederholung": {"geheim123"}}
+	if res, _ := fremd.PostForm(app.URL+"/sso/konten", konto); res.StatusCode == http.StatusOK || s.Geschuetzt() {
+		t.Fatalf("Einrichtung ohne Code: %d", res.StatusCode)
+	}
+	res, err := c.PostForm(app.URL+"/sso/konten?code="+s.einrichtcode, konto)
 	if err != nil || res.StatusCode != http.StatusOK {
 		t.Fatalf("anlegen: %v %v", err, res.StatusCode)
 	}

@@ -262,7 +262,11 @@ func (s *SSO) lokalAnmelden(w http.ResponseWriter, r *http.Request, k ssoKonto) 
 // kontenZugang: Ist die App gesperrt, verwaltet nur, wer angemeldet ist.
 func (s *SSO) kontenZugang(w http.ResponseWriter, r *http.Request) bool {
 	if !s.Geschuetzt() {
-		return true
+		if s.EinrichtungErlaubt(w, r) {
+			return true
+		}
+		s.fehlerSeite(w, "Noch keine Anmeldung eingerichtet. Den Link mit Einrichtungscode steht im Log der App.")
+		return false
 	}
 	if _, ok := s.Wer(r); ok {
 		return true
@@ -413,4 +417,20 @@ func (s *SSO) kontoLoeschen(w http.ResponseWriter, r *http.Request) {
 		text += " Es gibt kein Konto mehr und SSO ist aus: " + s.App + " ist jetzt ohne Anmeldung offen."
 	}
 	http.Redirect(w, r, "/sso/konten?gut=1&meldung="+url.QueryEscape(text), http.StatusSeeOther)
+}
+
+// EinrichtungErlaubt: solange weder SSO noch ein Konto eingerichtet ist,
+// darf nur einrichten, wer den Code aus dem Log kennt. Der Code kommt einmal
+// als ?code= und wird dann als Keks gehalten.
+func (s *SSO) EinrichtungErlaubt(w http.ResponseWriter, r *http.Request) bool {
+	if s.notaus {
+		return true
+	}
+	if c := r.URL.Query().Get("code"); c != "" && subtle.ConstantTimeCompare([]byte(c), []byte(s.einrichtcode)) == 1 {
+		http.SetCookie(w, &http.Cookie{Name: "sso_einrichten", Value: c, Path: "/", HttpOnly: true,
+			Secure: ssoSicher(r), SameSite: http.SameSiteStrictMode, MaxAge: 3600})
+		return true
+	}
+	k, err := r.Cookie("sso_einrichten")
+	return err == nil && subtle.ConstantTimeCompare([]byte(k.Value), []byte(s.einrichtcode)) == 1
 }

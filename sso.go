@@ -95,6 +95,10 @@ type SSO struct {
 	// Schlüssel. nil = keine.
 	Durchlass func(r *http.Request) bool
 
+	// einrichtcode erlaubt die Ersteinrichtung, solange nichts geschützt ist.
+	// Er steht nur im Log: wer die App startet, richtet sie ein.
+	einrichtcode string
+
 	mu         sync.RWMutex
 	k          SSOKonfig
 	schluessel []byte
@@ -136,6 +140,10 @@ func NeuesSSO(app, datei, notausVariable string) *SSO {
 	}
 	if s.notaus {
 		log.Printf("sso: per %s abgeschaltet", notausVariable)
+	}
+	s.einrichtcode = ssoZufall()
+	if !s.Geschuetzt() {
+		log.Printf("sso: noch keine Anmeldung eingerichtet. Erstes Konto anlegen unter /sso/konten?code=%s", s.einrichtcode)
 	}
 	return s
 }
@@ -280,6 +288,10 @@ func (s *SSO) Wer(r *http.Request) (SSONutzer, bool) {
 	}
 	// Wechselt der Anbieter, der Client oder die Freigabeliste, gelten alte
 	// Sitzungen nicht mehr.
+	// Ist SSO aus, gilt auch keine SSO-Sitzung mehr: Abschalten sperrt aus.
+	if !s.An() {
+		return SSONutzer{}, false
+	}
 	k := s.konfig()
 	if n.Aussteller != k.Aussteller || n.ClientID != k.ClientID || !ssoErlaubt(k.Erlaubt, n.SSONutzer) {
 		return SSONutzer{}, false
