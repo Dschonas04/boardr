@@ -40,3 +40,10 @@ CREATE TABLE IF NOT EXISTS pruefungen (
 	ms      int NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS pruefungen_kachel_zeit ON pruefungen(kachel, zeit DESC);
+
+-- Wer die App verwaltet. Die erste angemeldete Person trägt sich ein.
+CREATE TABLE IF NOT EXISTS admins (
+	kennung text PRIMARY KEY,
+	erster  boolean UNIQUE,
+	seit    timestamptz NOT NULL DEFAULT now()
+);

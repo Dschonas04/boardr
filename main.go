@@ -62,30 +62,38 @@ func (a *App) wege() http.Handler {
 	m.HandleFunc("GET /{$}", a.start)
 	m.HandleFunc("GET /b/{id}", a.boardZeigen)
 	m.HandleFunc("GET /api/zustand", a.zustandJSON)
-	m.HandleFunc("GET /verwalten", a.verwalten)
-	m.HandleFunc("POST /verwalten/board", a.boardSpeichern)
-	m.HandleFunc("POST /verwalten/board/{id}/loeschen", a.boardLoeschen)
-	m.HandleFunc("POST /verwalten/gruppe", a.gruppeSpeichern)
-	m.HandleFunc("POST /verwalten/gruppe/{id}/loeschen", a.gruppeLoeschen)
-	m.HandleFunc("GET /verwalten/kachel/{id}", a.kachelFormular)
-	m.HandleFunc("POST /verwalten/kachel", a.kachelSpeichern)
-	m.HandleFunc("POST /verwalten/kachel/{id}/loeschen", a.kachelLoeschen)
+	m.HandleFunc("GET /verwalten", a.nurAdmin(a.verwalten))
+	m.HandleFunc("POST /verwalten/board", a.nurAdmin(a.boardSpeichern))
+	m.HandleFunc("POST /verwalten/board/{id}/loeschen", a.nurAdmin(a.boardLoeschen))
+	m.HandleFunc("POST /verwalten/gruppe", a.nurAdmin(a.gruppeSpeichern))
+	m.HandleFunc("POST /verwalten/gruppe/{id}/loeschen", a.nurAdmin(a.gruppeLoeschen))
+	m.HandleFunc("GET /verwalten/kachel/{id}", a.nurAdmin(a.kachelFormular))
+	m.HandleFunc("POST /verwalten/kachel", a.nurAdmin(a.kachelSpeichern))
+	m.HandleFunc("POST /verwalten/kachel/{id}/loeschen", a.nurAdmin(a.kachelLoeschen))
 	return sicherheitskopf(nurAngemeldet(a.sso, m))
 }
 
-// angemeldet schützt die SSO-Einstellungen: nur wer angemeldet ist, oder
-// solange noch gar nichts eingerichtet ist.
 func (a *App) angemeldet(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := a.sso.Wer(r); ok || (!a.sso.Geschuetzt() && a.sso.EinrichtungErlaubt(w, r)) {
+		// Anmeldung und Konten verwalten nur Admins; vor der Einrichtung, wer
+		// den Code aus dem Log hat.
+		if !a.sso.Geschuetzt() && a.sso.EinrichtungErlaubt(w, r) {
 			h(w, r)
 			return
 		}
-		http.Error(w, "Bitte anmelden", http.StatusUnauthorized)
+		if _, ok := a.sso.Wer(r); !ok {
+			http.Error(w, "Bitte anmelden", http.StatusUnauthorized)
+			return
+		}
+		if !a.istAdmin(r) {
+			http.Error(w, "Nur für Admins", http.StatusForbidden)
+			return
+		}
+		h(w, r)
 	}
 }
 
 func (a *App) daten(r *http.Request, titel, nav string, d any) Daten {
 	n, _ := a.sso.Wer(r)
-	return Daten{App: "Boardr", Titel: titel, Nav: nav, Nutzer: n, D: d}
+	return Daten{App: "Boardr", Titel: titel, Nav: nav, Nutzer: n, Admin: a.istAdmin(r), D: d}
 }

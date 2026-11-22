@@ -21,7 +21,7 @@
   </div>
 </section>
 {{end}}{{else}}
-<div class="leer">Noch keine Kacheln. <a href="/verwalten">Jetzt anlegen</a></div>
+<div class="leer">Noch keine Kacheln. {{if $.Admin}}<a href="/verwalten">Jetzt anlegen</a>{{end}}</div>
 {{end}}
 <p class="leer" id="nichts" hidden>Nichts gefunden.</p>
 {{end}}

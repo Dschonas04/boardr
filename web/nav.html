@@ -1,1 +1,1 @@
-{{define "nav"}}{{range .D.Boards}}<a href="/b/{{.ID}}"{{if gleich $.Nav .ID}} class="aktiv"{{end}}>{{.Name}}</a>{{end}}<a href="/verwalten"{{if gleich .Nav "verwalten"}} class="aktiv"{{end}}>Verwalten</a>{{end}}
+{{define "nav"}}{{range .D.Boards}}<a href="/b/{{.ID}}"{{if gleich $.Nav .ID}} class="aktiv"{{end}}>{{.Name}}</a>{{end}}{{if .Admin}}<a href="/verwalten"{{if gleich .Nav "verwalten"}} class="aktiv"{{end}}>Verwalten</a>{{end}}{{end}}
