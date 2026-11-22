@@ -1,0 +1,10 @@
+{{define "inhalt"}}
+<div class="leiste"><h1>Aus Homarr übernehmen</h1><a class="knopf" href="/verwalten">Zurück</a></div>
+<form method="post" action="/verwalten/homarr" enctype="multipart/form-data" class="karte schmal">
+  <p>Homarrs <span class="code">db.sqlite</span> hochladen. Boards, Abschnitte und App-Kacheln kommen als neue Boards dazu, Vorhandenes bleibt.</p>
+  <p class="muted klein">Benutzer, Integrationen und Geheimnisse liest Boardr nicht. Die Datei wird nach dem Lesen gelöscht.</p>
+  <input type="hidden" name="token" value="{{.Token}}">
+  <label for="datei">Datenbank</label><input type="file" id="datei" name="datei" accept=".sqlite,.db" required>
+  <div class="leiste knopfzeile"><button class="primaer">Übernehmen</button></div>
+</form>
+{{end}}

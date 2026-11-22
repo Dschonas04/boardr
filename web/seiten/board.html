@@ -2,28 +2,52 @@
 <div class="leiste">
   <h1>{{.D.Name}}</h1>
   {{if .D.Gesamt}}<span class="pille {{if eq .D.Gut .D.Gesamt}}gut{{else}}warn{{end}}" id="summe">{{.D.Gut}} von {{.D.Gesamt}} erreichbar</span>{{end}}
-  <input type="search" id="suche" placeholder="Suchen … ( / )" style="max-width:260px" autocomplete="off">
+  <input type="search" id="suche" class="suche" placeholder="Suchen ( / )" aria-label="Suchen" autocomplete="off">
+  {{if .Admin}}<button type="button" id="ordnen" aria-pressed="false">Anordnen</button>{{end}}
 </div>
-{{range .D.Gruppen}}{{if .Kacheln}}
-<section class="gruppe">
+{{if .Admin}}<p class="ordnen-hilfe" id="ordnen-hilfe" role="status" hidden>Ziehen oder Kachel wählen und mit den Pfeiltasten schieben. Gespeichert wird sofort.</p>{{end}}
+{{if .D.Widgets}}
+<div class="widgets" id="widgets">
+  {{range .D.Widgets}}
+  <section class="widget" data-widget="{{.ID}}">
+    <h2>{{.Titel}}</h2>
+    <dl>{{if .Stand.Fehler}}<dd class="w-fehler">{{.Stand.Fehler}}</dd>{{else}}{{range .Stand.Werte}}<div><dt>{{.Name}}</dt><dd>{{.Wert}}</dd></div>{{else}}<dd class="muted">lädt</dd>{{end}}{{end}}</dl>
+  </section>
+  {{end}}
+</div>
+{{end}}
+<div id="gruppen" data-board="{{.D.ID}}" data-token="{{.Token}}">
+{{range .D.Gruppen}}{{if or .Kacheln $.Admin}}
+<section class="gruppe{{if not .Kacheln}} ohne{{end}}" data-gruppe="{{.ID}}">
   <h2>{{.Name}}</h2>
-  <div class="kacheln">
-    {{range .Kacheln}}
-    <a class="kachel" href="{{.Adresse}}" target="_blank" rel="noopener" data-id="{{.ID}}" data-suche="{{.Titel}} {{.Beschreibung}} {{.Adresse}}">
-      <span class="symbol">{{if .SymbolBild}}<img src="{{.Symbol}}" alt="" loading="lazy">{{else}}{{.Zeichen}}{{end}}</span>
-      <span class="text">
-        <span class="titel">{{.Titel}}</span>
-        <span class="unter">{{if .Beschreibung}}{{.Beschreibung}}{{else}}{{.Adresse}}{{end}}</span>
-      </span>
-      {{if .Pruefen}}<span class="punkt {{if .Geprueft}}{{if .OK}}gut{{else}}schlecht{{end}}{{end}}" title="{{if .Geprueft}}{{.Meldung}}, {{.MS}} ms{{if .Verfuegbar}}, 24 h: {{.Verfuegbar}} %{{end}}{{else}}noch nicht geprüft{{end}}"></span>{{end}}
-    </a>
-    {{end}}
-  </div>
+  <div class="kacheln">{{range .Kacheln}}{{template "kachelkarte" .}}{{end}}</div>
 </section>
-{{end}}{{else}}
-<div class="leer">Noch keine Kacheln. {{if $.Admin}}<a href="/verwalten">Jetzt anlegen</a>{{end}}</div>
+{{end}}{{end}}
+</div>
+{{if not .D.Kacheln}}
+<div class="leer" id="leer"><strong>Noch keine Kacheln</strong>{{if .Admin}}<a class="knopf" href="/verwalten">Jetzt anlegen</a>{{else}}Hier ist noch nichts für dich.{{end}}</div>
+{{end}}
+{{if .D.Andere}}
+<section class="gruppe" id="andere" hidden>
+  <h2>Auf anderen Boards</h2>
+  <div class="kacheln">{{range .D.Andere}}{{template "kachelkarte" .}}{{end}}</div>
+</section>
+{{end}}
+{{if .D.Suchen}}
+<div class="suchziele" id="suchziele" hidden>{{range .D.Suchen}}<a class="knopf" data-suchziel="{{.Suche}}" target="_blank" rel="noopener noreferrer">In {{.Titel}} suchen</a>{{end}}</div>
 {{end}}
 <p class="leer" id="nichts" hidden>Nichts gefunden.</p>
+{{end}}
+{{define "kachelkarte"}}
+<a class="kachel" href="{{.Adresse}}" target="_blank" rel="noopener noreferrer" data-id="{{.ID}}" data-suche="{{.Titel}} {{.Beschreibung}} {{.Adresse}}">
+  <span class="symbol">{{if .SymbolBild}}<img src="{{.Symbol}}" alt="" loading="lazy" referrerpolicy="no-referrer" draggable="false">{{else}}{{.Zeichen}}{{end}}</span>
+  <span class="text">
+    <span class="titel">{{.Titel}}</span>
+    <span class="unter">{{if .Beschreibung}}{{.Beschreibung}}{{else}}{{.Adresse}}{{end}}</span>
+    {{if .Pruefen}}<span class="messung">{{if .Geprueft}}{{if .OK}}{{.MS}} ms{{else}}{{.Meldung}}{{end}}{{if .HatVerlauf}} · {{.Verfuegbar}} % in 24 h{{end}}{{else}}noch nicht geprüft{{end}}</span>{{end}}
+  </span>
+  {{if .Pruefen}}<span class="punkt {{if .Geprueft}}{{if .OK}}gut{{else}}schlecht{{end}}{{end}}" aria-hidden="true"></span>{{end}}
+</a>
 {{end}}
 {{define "kopfzeilen"}}<link rel="stylesheet" href="/statisch/board.css">{{end}}
 {{define "skripte"}}<script src="/statisch/board.js" defer></script>{{end}}

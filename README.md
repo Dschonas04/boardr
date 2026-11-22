@@ -1,50 +1,65 @@
-# Boardr
+<p align="center"><img src="docs/logo.svg" width="76" alt=""></p>
+<h1 align="center">Boardr</h1>
+<p align="center">Startseite fürs Homelab: Dienste als Kacheln, mit Status, Widgets und Suche.</p>
 
-Startseite fürs Homelab: alle Dienste als Kacheln, mit Status, Widgets und Suche.
+![Board](docs/board.png)
 
-**Stand: 0.1.** Boards, Gruppen und Kacheln mit Verwaltung im Browser,
-Statusprüfung (HTTP, TCP) jede Minute mit Verfügbarkeit über 24 Stunden,
-Suche (Taste `/`, Enter öffnet den ersten Treffer), Anmeldung über Keycloak
-oder eigene Konten. Widgets und das Anordnen per Ziehen kommen noch.
+## Was es kann
 
-## Geplant
-
-* **Kacheln** für jeden Dienst, in Gruppen und Tabs, per Ziehen anordnen
-* **Statusprüfung** je Kachel (HTTP, TCP, Ping) mit Antwortzeit und Verlauf
-* **Widgets**: Proxmox (Knoten, VMs), Prometheus-Abfragen, Pi-hole, Home Assistant, Wetter, Kalender
-* **Suche** über alle Kacheln und direkt in Diensten (Nexora, Paperless, Jellyfin)
-* **Mehrere Boards**, sichtbar je nach Keycloak-Gruppe
-* **Homelab-CA** wird vertraut, interne Dienste per IP:Port
-* **Übernahme aus Homarr**: Kacheln und Anordnung aus der bestehenden SQLite einlesen
-* Schnell und ohne schweres Frontend-Framework
-
-## Schritte
-
-1. Board mit Kacheln aus der Datenbank, Bearbeiten im Browser
-2. Statusprüfung im Hintergrund
-3. Gruppen, Tabs, Anordnen per Ziehen
-4. Keycloak und Sichtbarkeit je Gruppe
-5. Widgets (Proxmox, Prometheus, Pi-hole, Home Assistant)
-6. Übernahme aus Homarr
+| Bereich | Funktionen |
+|---|---|
+| Boards | mehrere Boards als Reiter, Gruppen, sichtbar für alle oder nur für bestimmte Gruppen |
+| Anordnen | ziehen oder mit den Pfeiltasten schieben, auch zwischen Gruppen |
+| Status | HTTP, `tcp://host:port`, `ping://host`, Antwortzeit, Verfügbarkeit über 24 Stunden |
+| Suche | Taste `/`, über alle sichtbaren Boards, auf Wunsch direkt in Diensten |
+| Widgets | Proxmox, Prometheus, Pi-hole 6, Home Assistant, Wetter, Kalender |
+| Übernahme | Boards, Abschnitte und App-Kacheln aus Homarrs `db.sqlite` |
 
 ## Starten
 
 ```bash
 cp .env.beispiel .env            # Kennwort für die Datenbank eintragen
 docker compose up -d --build
+docker compose logs boardr       # Link mit Einrichtungscode
 ```
 
-Danach unter `http://<host>:8390`. Im Homelab kommt TLS über Caddy mit
-der Homelab-CA davor, der Dienst selbst lauscht dann auf `127.0.0.1:28390`.
+Boardr läuft unter `http://<host>:8390`. Das erste Konto aus dem Link verwaltet
+die App. Wer nur OIDC benutzt, trägt den Admin in `BOARDR_ADMIN` ein.
+
+## Widgets mit Geheimnis
+
+Tokens stehen in der `.env`, nie in der Datenbank. Im Widget steht nur der Name:
+
+```bash
+BOARDR_WIDGET_PVE=benutzer@pve!boardr=...
+BOARDR_WIDGET_PVE_ZIEL=https://pve.example:8006
+```
+
+`_ZIEL` ist Pflicht und der einzige Host, der das Token bekommt. Das Wetter
+kommt von open-meteo.com, dorthin geht die auf zwei Stellen gerundete Position.
+
+## Boards je Gruppe
+
+Beim Board stehen die Gruppen mit Komma. Verglichen wird mit dem Claim `groups`
+des Anbieters. Keycloak schickt ihn erst mit einem Mapper "Group Membership" am
+Client. Admins sehen alle Boards.
+
+## Grenzen
+
+* Kalender zeigen einzelne Termine, keine Serien.
+* Ping geht über IPv4 und braucht `net.ipv4.ping_group_range` (in Docker gesetzt).
+* Symbole brauchen https, hochgeladene Homarr-Bilder werden zum Buchstaben.
 
 ## Entwickeln
 
 ```bash
 go run .
 go test ./...
+# mit Datenbank; sie wird geleert, der Name muss mit pruef beginnen
+BOARDR_TEST_DB=postgres://.../pruef_boardr go test ./...
 ```
 
-Go 1.27.4, Datenbank PostgreSQL. Das Schema steht in `schema.sql`.
+Go 1.27.4, PostgreSQL 17. Das Schema steht in `schema.sql`.
 
 ## Lizenz
 

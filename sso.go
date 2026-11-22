@@ -62,6 +62,8 @@ type SSONutzer struct {
 	Nutzer  string `json:"nutzer"`
 	// Ob der Anbieter die Adresse als bestätigt meldet.
 	EmailBestaetigt bool `json:"emailBestaetigt"`
+	// Gruppen aus dem Claim "groups", falls der Anbieter ihn mitschickt.
+	Gruppen []string `json:"gruppen,omitempty"`
 }
 
 type ssoDatei struct {
@@ -555,6 +557,7 @@ func (s *SSO) einloesen(r *http.Request, k SSOKonfig, a ssoAnbieter, code string
 		Email   string          `json:"email"`
 		Bestaet bool            `json:"email_verified"`
 		Nutzer  string          `json:"preferred_username"`
+		Gruppen json.RawMessage `json:"groups"`
 	}
 	if err := json.Unmarshal(roh, &c); err != nil {
 		return n, errors.New("Das id_token ist unlesbar.")
@@ -577,6 +580,17 @@ func (s *SSO) einloesen(r *http.Request, k SSOKonfig, a ssoAnbieter, code string
 	n = SSONutzer{Kennung: c.Sub, Name: c.Name, Email: strings.ToLower(c.Email), Nutzer: c.Nutzer, EmailBestaetigt: c.Bestaet}
 	if n.Name == "" {
 		n.Name = n.Nutzer
+	}
+	var gruppen []string
+	if json.Unmarshal(c.Gruppen, &gruppen) == nil {
+		groesse := 0
+		for _, g := range gruppen {
+			// Die Sitzung steckt im Keks, der fasst 4 KB.
+			if groesse += len(g) + 3; groesse > 1200 {
+				break
+			}
+			n.Gruppen = append(n.Gruppen, g)
+		}
 	}
 	return n, nil
 }
@@ -674,11 +688,8 @@ func (s *SSO) einstellungenLesen(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *SSO) einstellungenSchreiben(w http.ResponseWriter, r *http.Request) {
-	var neu struct {
-		SSOKonfig
-		GeheimnisBehalten bool `json:"geheimnisBehalten"`
-	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&neu); err != nil {
+	neu, err := ssoEingabeLesen(r.Body)
+	if err != nil {
 		ssoJSON(w, http.StatusBadRequest, map[string]string{"fehler": "Ungültige Angaben"})
 		return
 	}
@@ -706,17 +717,20 @@ func (s *SSO) einstellungenSchreiben(w http.ResponseWriter, r *http.Request) {
 			ssoJSON(w, http.StatusBadRequest, map[string]string{"fehler": "Ohne Client-ID lässt sich SSO nicht einschalten."})
 			return
 		}
-		// In dieser App ist der Anbieter schon vor der Sperre gefragt.
-		if r.Context().Value(ausstellerGeprueft{}) != neu.Aussteller {
-			if _, err := s.anbieter(r.Context(), neu.Aussteller); err != nil {
-				ssoJSON(w, http.StatusBadRequest, map[string]string{"fehler": err.Error()})
+		if geprueft, vorab := r.Context().Value(ausstellerGeprueft{}).(string); vorab {
+			// Unter der Sperre: kein Netz, nur genau das Geprüfte.
+			if geprueft == "" || geprueft != neu.Aussteller {
+				ssoJSON(w, http.StatusBadRequest, map[string]string{"fehler": "Der Aussteller ist nicht vorab geprüft."})
 				return
 			}
+		} else if _, err := s.anbieter(r.Context(), neu.Aussteller); err != nil {
+			ssoJSON(w, http.StatusBadRequest, map[string]string{"fehler": err.Error()})
+			return
 		}
 	}
 	s.mu.Lock()
 	s.k = neu.SSOKonfig
-	err := s.sichern()
+	err = s.sichern()
 	s.mu.Unlock()
 	if err != nil {
 		ssoJSON(w, http.StatusInternalServerError, map[string]string{"fehler": "Nicht gespeichert: " + err.Error()})

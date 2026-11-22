@@ -1,5 +1,5 @@
 {{define "inhalt"}}
-<div class="leiste"><h1>Verwalten</h1><a class="knopf" href="/sso/konten">Konten</a></div>
+<div class="leiste"><h1>Verwalten</h1><a class="knopf" href="/verwalten/widgets">Widgets</a><a class="knopf" href="/verwalten/homarr">Aus Homarr</a><a class="knopf" href="/sso/konten">Konten</a></div>
 {{$t := .Token}}
 {{range .D.Liste}}
 <div class="karte" style="margin-bottom:16px">
@@ -7,6 +7,7 @@
     <input type="hidden" name="token" value="{{$t}}"><input type="hidden" name="id" value="{{.ID}}">
     <input type="text" name="name" value="{{.Name}}" style="max-width:260px;font-weight:600" aria-label="Name des Boards">
     <input type="number" name="reihe" value="{{.Reihe}}" style="width:80px" title="Reihenfolge" aria-label="Reihenfolge">
+    <input type="text" name="fuer" value="{{.Fuer}}" style="max-width:230px" placeholder="sichtbar für: alle" title="Gruppen mit Komma, leer: alle" aria-label="Sichtbar für Gruppen">
     <button>Speichern</button>
     <a class="knopf" href="/b/{{.ID}}">Ansehen</a>
   </form>

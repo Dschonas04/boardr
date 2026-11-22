@@ -1,20 +1,39 @@
-.gruppe h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 26px 0 10px; }
-.kacheln { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.gruppe h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 26px 0 10px; }
+.kacheln { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
 .kachel {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px; position: relative;
-  background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius);
-  text-decoration: none; transition: border-color .12s, transform .12s;
+  display: flex; align-items: center; gap: 13px; min-height: 78px; padding: 13px 30px 13px 14px; position: relative;
+  background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius); box-shadow: var(--schatten);
+  text-decoration: none;
 }
-.kachel:hover { border-color: var(--muted); transform: translateY(-1px); }
+.kachel:hover { border-color: var(--rand2); background: var(--flaeche2); }
 .symbol {
-  flex: 0 0 38px; height: 38px; border-radius: 9px; display: grid; place-items: center;
-  background: var(--hover); font-weight: 700; font-size: 16px; overflow: hidden;
+  flex: 0 0 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--hover); font-weight: 700; font-size: 17px; overflow: hidden;
 }
-.symbol img { width: 28px; height: 28px; object-fit: contain; }
+.symbol img { width: 30px; height: 30px; object-fit: contain; }
 .text { min-width: 0; display: flex; flex-direction: column; }
-.titel { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.unter { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.punkt { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--rand); }
+.titel { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unter, .messung { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.messung { font-size: 11px; font-variant-numeric: tabular-nums; }
+.punkt { position: absolute; top: 12px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--rand2); }
 .punkt.gut { background: var(--gut); }
 .punkt.schlecht { background: var(--schlecht); box-shadow: 0 0 0 3px color-mix(in srgb, var(--schlecht) 25%, transparent); }
 .kachel[hidden], .gruppe[hidden] { display: none; }
+input.suche { width: auto; flex: 0 1 280px; }
+.suchziele { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+.widgets { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+.widget { padding: 14px 16px; background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius); box-shadow: var(--schatten); }
+.widget h2 { margin: 0 0 8px; font-size: 13px; }
+.widget dl { margin: 0; }
+.widget dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.widget dt { color: var(--muted); }
+.widget dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.widget .w-fehler { color: var(--schlecht); text-align: left; }
+
+.gruppe.ohne:not(:has(.kachel)) { display: none; }
+.ordnen-hilfe { color: var(--muted); font-size: 12px; }
+.ordnet .gruppe.ohne { display: block; }
+.ordnet #gruppen .kacheln { min-height: 78px; border-radius: var(--radius); outline: 1px dashed var(--rand2); outline-offset: 4px; }
+.ordnet #gruppen .kachel { cursor: grab; }
+@media (max-width: 700px) { input.suche { flex: 1 1 100%; } }

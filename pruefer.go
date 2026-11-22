@@ -16,7 +16,8 @@ import (
 // Die Statusprüfung läuft im Hintergrund, jede Minute für alle Kacheln mit
 // Prüfung. Eine Kachel gilt als erreichbar, wenn die Adresse mit einem Status
 // unter 500 antwortet (auch 401/403: der Dienst lebt, er will nur eine
-// Anmeldung) oder, bei tcp://host:port, die Verbindung zustande kommt.
+// Anmeldung) oder, bei tcp://host:port, die Verbindung zustande kommt, oder, bei
+// ping://host, das Echo zurückkommt.
 
 var anstoss = make(chan struct{}, 1)
 
@@ -100,6 +101,14 @@ func pruefe(ctx context.Context, adresse string) (bool, int, string) {
 	u, err := url.Parse(adresse)
 	if err != nil {
 		return false, 0, "Adresse unlesbar"
+	}
+	if u.Scheme == "ping" {
+		einmal, ende := context.WithTimeout(ctx, 5*time.Second)
+		defer ende()
+		if err := ping(einmal, u.Hostname()); err != nil {
+			return false, ms(), kurz(err)
+		}
+		return true, ms(), "Echo"
 	}
 	if u.Scheme == "tcp" {
 		c, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "tcp", u.Host)

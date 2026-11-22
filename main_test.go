@@ -16,12 +16,7 @@ func TestSeitenRendern(t *testing.T) {
 		Geprueft: true, OK: true, MS: 12, Meldung: "HTTP 200", Seit: time.Now(), Symbol: "https://x/y.svg"}
 	g := []Gruppe{{ID: "g1", Board: "b1", Name: "Monitoring", Kacheln: []Kachel{k}}}
 	faelle := map[string]any{
-		"board": struct {
-			navDaten
-			Name        string
-			Gruppen     []Gruppe
-			Gesamt, Gut int
-		}{nav, "Start", g, 1, 1},
+		"board": boardSeite{navDaten: nav, ID: "b1", Name: "Start", Gruppen: g, Gesamt: 1, Gut: 1, Kacheln: 1},
 		"verwalten": struct {
 			navDaten
 			Liste []struct {

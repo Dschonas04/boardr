@@ -15,8 +15,10 @@
   <label for="symbol">Symbol: Bildadresse oder ein Zeichen</label>
   <input type="text" id="symbol" name="symbol" value="{{.D.K.Symbol}}" placeholder="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg">
   <label><input type="checkbox" name="pruefen" value="ja"{{if .D.K.Pruefen}} checked{{end}}> Erreichbarkeit prüfen</label>
-  <label for="pruef_adresse">Andere Adresse für die Prüfung (optional, auch tcp://host:port)</label>
+  <label for="pruef_adresse">Andere Adresse für die Prüfung (optional, auch tcp://host:port oder ping://host)</label>
   <input type="text" id="pruef_adresse" name="pruef_adresse" value="{{.D.K.PruefAdresse}}">
+  <label for="suche">Suche im Dienst (optional, {q} steht für den Suchtext)</label>
+  <input type="text" id="suche" name="suche" value="{{.D.K.Suche}}" placeholder="https://host/suche?q={q}">
   <div class="leiste" style="margin-top:16px"><button class="primaer">Speichern</button><a class="knopf" href="/verwalten">Abbrechen</a></div>
 </form>
 {{end}}

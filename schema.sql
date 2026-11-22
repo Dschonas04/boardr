@@ -46,3 +46,18 @@ CREATE TABLE IF NOT EXISTS admins (
 	kennung text PRIMARY KEY,
 	seit    timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS sichtbar_fuer text NOT NULL DEFAULT '';
+ALTER TABLE kacheln ADD COLUMN IF NOT EXISTS suche text NOT NULL DEFAULT '';
+
+-- Widgets eines Boards. Geheimnisse stehen nie hier, nur der Name der Variable.
+CREATE TABLE IF NOT EXISTS widgets (
+	id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	board     uuid NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+	art       text NOT NULL,
+	titel     text NOT NULL,
+	adresse   text NOT NULL DEFAULT '',
+	abfrage   text NOT NULL DEFAULT '',
+	geheimnis text NOT NULL DEFAULT '',
+	reihe     int NOT NULL DEFAULT 0
+);

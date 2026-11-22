@@ -12,6 +12,7 @@ type Board struct {
 	ID    string
 	Name  string
 	Reihe int
+	Fuer  string // Gruppen mit Komma, leer: alle
 }
 
 type Kachel struct {
@@ -32,6 +33,8 @@ type Kachel struct {
 	Seit     time.Time
 	// Anteil erfolgreicher Prüfungen in den letzten 24 Stunden, in Prozent.
 	Verfuegbar int
+	HatVerlauf bool
+	Suche      string // Adresse mit {q}
 }
 
 // SymbolBild sagt, ob das Symbol eine Bildadresse ist.
@@ -63,7 +66,7 @@ type navDaten struct {
 }
 
 func (a *App) boards(ctx context.Context) []Board {
-	rows, err := a.db.Query(ctx, `SELECT id::text, name, reihe FROM boards ORDER BY reihe, name`)
+	rows, err := a.db.Query(ctx, `SELECT id::text, name, reihe, sichtbar_fuer FROM boards ORDER BY reihe, name`)
 	if err != nil {
 		return nil
 	}
@@ -71,7 +74,7 @@ func (a *App) boards(ctx context.Context) []Board {
 	var l []Board
 	for rows.Next() {
 		var b Board
-		if rows.Scan(&b.ID, &b.Name, &b.Reihe) == nil {
+		if rows.Scan(&b.ID, &b.Name, &b.Reihe, &b.Fuer) == nil {
 			l = append(l, b)
 		}
 	}
@@ -85,7 +88,8 @@ func (a *App) gruppen(ctx context.Context, board string) ([]Gruppe, error) {
 		       k.id::text, k.titel, k.adresse, k.beschreibung, k.symbol, k.pruefen, k.pruef_adresse, k.reihe,
 		       z.ok, z.ms, z.meldung, z.geprueft,
 		       (SELECT round(100.0 * count(*) FILTER (WHERE p.ok) / nullif(count(*), 0))::int
-		          FROM pruefungen p WHERE p.kachel = k.id AND p.zeit > now() - interval '24 hours')
+		          FROM pruefungen p WHERE p.kachel = k.id AND p.zeit > now() - interval '24 hours'),
+		       COALESCE(k.suche, '')
 		  FROM gruppen g
 		  LEFT JOIN kacheln k ON k.gruppe = g.id
 		  LEFT JOIN zustand z ON z.kachel = k.id
@@ -106,8 +110,9 @@ func (a *App) gruppen(ctx context.Context, board string) ([]Gruppe, error) {
 		var meldung *string
 		var seit *time.Time
 		var verf *int
+		var suche string
 		if err := rows.Scan(&g.ID, &g.Board, &g.Name, &g.Reihe, &kid, &titel, &adr, &beschr, &sym, &pruefen, &padr, &reihe,
-			&ok, &ms, &meldung, &seit, &verf); err != nil {
+			&ok, &ms, &meldung, &seit, &verf, &suche); err != nil {
 			return nil, err
 		}
 		if len(l) == 0 || l[len(l)-1].ID != g.ID {
@@ -117,12 +122,12 @@ func (a *App) gruppen(ctx context.Context, board string) ([]Gruppe, error) {
 			continue
 		}
 		k := Kachel{ID: *kid, Gruppe: g.ID, Titel: *titel, Adresse: *adr, Beschreibung: *beschr, Symbol: *sym,
-			Pruefen: *pruefen, PruefAdresse: *padr, Reihe: *reihe}
+			Pruefen: *pruefen, PruefAdresse: *padr, Reihe: *reihe, Suche: suche}
 		if ok != nil {
 			k.Geprueft, k.OK, k.MS, k.Meldung, k.Seit = true, *ok, *ms, *meldung, *seit
 		}
 		if verf != nil {
-			k.Verfuegbar = *verf
+			k.Verfuegbar, k.HatVerlauf = *verf, true
 		}
 		l[len(l)-1].Kacheln = append(l[len(l)-1].Kacheln, k)
 	}
@@ -131,57 +136,91 @@ func (a *App) gruppen(ctx context.Context, board string) ([]Gruppe, error) {
 
 // ---------- Ansicht ----------
 
+type boardSeite struct {
+	navDaten
+	ID          string
+	Name        string
+	Gruppen     []Gruppe
+	Gesamt, Gut int
+	Kacheln     int
+	Andere      []Kachel // von den anderen Boards, nur für die Suche
+	Suchen      []Kachel // Dienste, in denen sich suchen lässt
+	Widgets     []Widget
+}
+
 func (a *App) start(w http.ResponseWriter, r *http.Request) {
-	b := a.boards(r.Context())
-	if len(b) == 0 {
+	b := a.meineBoards(r)
+	if len(b) > 0 {
+		http.Redirect(w, r, "/b/"+b[0].ID, http.StatusFound)
+		return
+	}
+	if a.istAdmin(r) {
 		http.Redirect(w, r, "/verwalten", http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "/b/"+b[0].ID, http.StatusFound)
+	a.v.zeigen(w, r, "board", a.daten(r, "Boardr", "", boardSeite{Name: "Boardr"}))
 }
 
 func (a *App) boardZeigen(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	boards := a.boards(r.Context())
-	var name string
-	for _, b := range boards {
-		if b.ID == id {
-			name = b.Name
+	s := boardSeite{ID: r.PathValue("id")}
+	s.Boards = a.meineBoards(r)
+	darf := map[string]bool{}
+	for _, b := range s.Boards {
+		darf[b.ID] = true
+		if b.ID == s.ID {
+			s.Name = b.Name
 		}
 	}
-	if name == "" {
+	if !darf[s.ID] {
 		http.NotFound(w, r)
 		return
 	}
-	g, err := a.gruppen(r.Context(), id)
+	g, err := a.gruppen(r.Context(), "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	gesamt, gut := 0, 0
 	for _, x := range g {
+		if !darf[x.Board] {
+			continue
+		}
+		hier := x.Board == s.ID
+		if hier {
+			s.Gruppen = append(s.Gruppen, x)
+		}
 		for _, k := range x.Kacheln {
+			if k.Suche != "" {
+				s.Suchen = append(s.Suchen, k)
+			}
+			if !hier {
+				s.Andere = append(s.Andere, k)
+				continue
+			}
+			s.Kacheln++
 			if k.Pruefen && k.Geprueft {
-				gesamt++
+				s.Gesamt++
 				if k.OK {
-					gut++
+					s.Gut++
 				}
 			}
 		}
 	}
-	a.v.zeigen(w, r, "board", a.daten(r, name, id, struct {
-		navDaten
-		Name        string
-		Gruppen     []Gruppe
-		Gesamt, Gut int
-	}{navDaten{boards}, name, g, gesamt, gut}))
+	if s.Widgets, err = a.widgetsVon(r.Context(), []string{s.ID}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	a.v.zeigen(w, r, "board", a.daten(r, s.Name, s.ID, s))
 }
 
-// zustandJSON: für das Nachladen im Browser, ohne die Seite neu zu laden.
+// zustandJSON: für das Nachladen im Browser, nur von Boards, die man sehen darf.
 func (a *App) zustandJSON(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.Query(r.Context(), `SELECT kachel::text, ok, ms, meldung FROM zustand`)
+	rows, err := a.db.Query(r.Context(), `SELECT z.kachel::text, z.ok, z.ms, z.meldung,
+		(SELECT round(100.0 * count(*) FILTER (WHERE p.ok) / nullif(count(*), 0))::int
+		   FROM pruefungen p WHERE p.kachel = z.kachel AND p.zeit > now() - interval '24 hours')
+		FROM zustand z JOIN kacheln k ON k.id = z.kachel JOIN gruppen g ON g.id = k.gruppe
+		WHERE g.board::text = ANY($1::text[])`, boardIDs(a.meineBoards(r)))
 	if err != nil {
-		alsJSON(w, 500, map[string]string{"fehler": err.Error()})
+		alsJSON(w, 500, map[string]string{"fehler": "Datenbank"})
 		return
 	}
 	defer rows.Close()
@@ -189,12 +228,13 @@ func (a *App) zustandJSON(w http.ResponseWriter, r *http.Request) {
 		OK      bool   `json:"ok"`
 		MS      int    `json:"ms"`
 		Meldung string `json:"meldung"`
+		Anteil  *int   `json:"anteil"`
 	}
 	raus := map[string]z{}
 	for rows.Next() {
 		var id string
 		var x z
-		if rows.Scan(&id, &x.OK, &x.MS, &x.Meldung) == nil {
+		if rows.Scan(&id, &x.OK, &x.MS, &x.Meldung, &x.Anteil) == nil {
 			raus[id] = x
 		}
 	}
@@ -246,9 +286,9 @@ func (a *App) boardSpeichern(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	if id := r.FormValue("id"); id != "" {
-		_, err = a.db.Exec(r.Context(), `UPDATE boards SET name=$2, reihe=$3 WHERE id::text=$1`, id, name, zahl(r.FormValue("reihe")))
+		_, err = a.db.Exec(r.Context(), `UPDATE boards SET name=$2, reihe=$3, sichtbar_fuer=$4 WHERE id::text=$1`, id, name, zahl(r.FormValue("reihe")), strings.Join(gruppenListe(r.FormValue("fuer")), ", "))
 	} else {
-		_, err = a.db.Exec(r.Context(), `INSERT INTO boards (name, reihe) VALUES ($1, $2)`, name, zahl(r.FormValue("reihe")))
+		_, err = a.db.Exec(r.Context(), `INSERT INTO boards (name, reihe, sichtbar_fuer) VALUES ($1, $2, $3)`, name, zahl(r.FormValue("reihe")), strings.Join(gruppenListe(r.FormValue("fuer")), ", "))
 	}
 	if err != nil {
 		zurueck(w, r, "/verwalten", "Fehler: "+err.Error())
@@ -261,7 +301,10 @@ func (a *App) boardLoeschen(w http.ResponseWriter, r *http.Request) {
 	if !pruefeFormular(w, r) {
 		return
 	}
-	a.db.Exec(r.Context(), `DELETE FROM boards WHERE id::text=$1`, r.PathValue("id"))
+	if _, err := a.db.Exec(r.Context(), `DELETE FROM boards WHERE id::text=$1`, r.PathValue("id")); err != nil {
+		zurueck(w, r, "/verwalten", "Board nicht gelöscht")
+		return
+	}
 	zurueck(w, r, "/verwalten", "Board gelöscht")
 }
 
@@ -292,7 +335,10 @@ func (a *App) gruppeLoeschen(w http.ResponseWriter, r *http.Request) {
 	if !pruefeFormular(w, r) {
 		return
 	}
-	a.db.Exec(r.Context(), `DELETE FROM gruppen WHERE id::text=$1`, r.PathValue("id"))
+	if _, err := a.db.Exec(r.Context(), `DELETE FROM gruppen WHERE id::text=$1`, r.PathValue("id")); err != nil {
+		zurueck(w, r, "/verwalten", "Gruppe nicht gelöscht")
+		return
+	}
 	zurueck(w, r, "/verwalten", "Gruppe gelöscht")
 }
 
@@ -344,17 +390,24 @@ func (a *App) kachelSpeichern(w http.ResponseWriter, r *http.Request) {
 		zurueck(w, r, "/verwalten", "Die Adresse muss mit http:// oder https:// beginnen")
 		return
 	}
+	suche := strings.TrimSpace(r.FormValue("suche"))
+	if suche != "" && (!strings.Contains(suche, "{q}") || !webAdresse(strings.ReplaceAll(suche, "{q}", "x"))) {
+		zurueck(w, r, "/verwalten", "Die Suchadresse braucht http(s) und {q}")
+		return
+	}
 	args := []any{r.FormValue("gruppe"), titel, adresse, strings.TrimSpace(r.FormValue("beschreibung")),
 		strings.TrimSpace(r.FormValue("symbol")), r.FormValue("pruefen") == "ja",
-		strings.TrimSpace(r.FormValue("pruef_adresse")), zahl(r.FormValue("reihe"))}
+		strings.TrimSpace(r.FormValue("pruef_adresse")), zahl(r.FormValue("reihe")), suche}
 	var err error
 	if id := r.FormValue("id"); id != "" {
 		_, err = a.db.Exec(r.Context(), `UPDATE kacheln SET gruppe=$1::uuid, titel=$2, adresse=$3, beschreibung=$4, symbol=$5,
-			pruefen=$6, pruef_adresse=$7, reihe=$8 WHERE id::text=$9`, append(args, id)...)
-		a.db.Exec(r.Context(), `DELETE FROM zustand WHERE kachel::text=$1`, id)
+			pruefen=$6, pruef_adresse=$7, reihe=$8, suche=$9 WHERE id::text=$10`, append(args, id)...)
+		if err == nil {
+			_, err = a.db.Exec(r.Context(), `DELETE FROM zustand WHERE kachel::text=$1`, id)
+		}
 	} else {
-		_, err = a.db.Exec(r.Context(), `INSERT INTO kacheln (gruppe, titel, adresse, beschreibung, symbol, pruefen, pruef_adresse, reihe)
-			VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)`, args...)
+		_, err = a.db.Exec(r.Context(), `INSERT INTO kacheln (gruppe, titel, adresse, beschreibung, symbol, pruefen, pruef_adresse, reihe, suche)
+			VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)`, args...)
 	}
 	if err != nil {
 		zurueck(w, r, "/verwalten", "Fehler: "+err.Error())
@@ -368,7 +421,10 @@ func (a *App) kachelLoeschen(w http.ResponseWriter, r *http.Request) {
 	if !pruefeFormular(w, r) {
 		return
 	}
-	a.db.Exec(r.Context(), `DELETE FROM kacheln WHERE id::text=$1`, r.PathValue("id"))
+	if _, err := a.db.Exec(r.Context(), `DELETE FROM kacheln WHERE id::text=$1`, r.PathValue("id")); err != nil {
+		zurueck(w, r, "/verwalten", "Kachel nicht gelöscht")
+		return
+	}
 	zurueck(w, r, "/verwalten", "Kachel gelöscht")
 }
 

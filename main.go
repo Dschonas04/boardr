@@ -19,6 +19,7 @@ import (
 )
 
 type App struct {
+	staende widgetStaende
 	// verwaltung: Änderungen an Konten, Rollen und Anmeldung laufen nacheinander.
 	verwaltung Sperre
 	admins     []string // Vorgabe des Betreibers
@@ -44,6 +45,7 @@ func main() {
 		log.Printf("Beispiel: %v", err)
 	}
 	go a.pruefer(ctx)
+	go a.widgetLauf(ctx)
 
 	adresse := ":" + umgebung("BOARDR_PORT", "8390")
 	srv := &http.Server{Addr: adresse, Handler: a.wege(), ReadHeaderTimeout: 10 * time.Second}
@@ -70,6 +72,13 @@ func (a *App) wege() http.Handler {
 	m.HandleFunc("GET /{$}", a.start)
 	m.HandleFunc("GET /b/{id}", a.boardZeigen)
 	m.HandleFunc("GET /api/zustand", a.zustandJSON)
+	m.HandleFunc("GET /api/widgets", a.widgetsJSON)
+	m.HandleFunc("POST /verwalten/ordnen", a.nurAdmin(a.ordnen))
+	m.HandleFunc("GET /verwalten/widgets", a.nurAdmin(a.widgetSeite))
+	m.HandleFunc("POST /verwalten/widgets", a.nurAdmin(a.widgetSpeichern))
+	m.HandleFunc("POST /verwalten/widgets/{id}/loeschen", a.nurAdmin(a.widgetLoeschen))
+	m.HandleFunc("GET /verwalten/homarr", a.nurAdmin(a.homarrSeite))
+	m.HandleFunc("POST /verwalten/homarr", a.nurAdmin(a.homarrHolen))
 	m.HandleFunc("GET /verwalten", a.nurAdmin(a.verwalten))
 	m.HandleFunc("POST /verwalten/board", a.nurAdmin(a.boardSpeichern))
 	m.HandleFunc("POST /verwalten/board/{id}/loeschen", a.nurAdmin(a.boardLoeschen))

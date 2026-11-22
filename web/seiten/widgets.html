@@ -1,0 +1,33 @@
+{{define "inhalt"}}{{$t := .Token}}{{$w := .D.W}}
+<div class="leiste"><h1>Widgets</h1><a class="knopf" href="/verwalten">Zurück</a></div>
+<div class="zwei">
+<div>
+{{if .D.Liste}}<table>
+<tr><th>Widget</th><th>Stand</th><th></th></tr>
+{{range .D.Liste}}<tr>
+<td><a href="/verwalten/widgets?id={{.ID}}"><strong>{{.Titel}}</strong></a><div class="muted klein">{{.Art}}</div></td>
+<td>{{if .Stand.Fehler}}<span class="pille schlecht">{{.Stand.Fehler}}</span>{{else if .Stand.Werte}}<span class="pille gut">ok</span>{{else}}<span class="pille">wartet</span>{{end}}</td>
+<td><form method="post" action="/verwalten/widgets/{{.ID}}/loeschen" data-frage="Widget löschen?"><input type="hidden" name="token" value="{{$t}}"><button class="klein gefahr">Löschen</button></form></td>
+</tr>{{end}}
+</table>{{else}}<div class="leer"><strong>Noch keine Widgets</strong>Zahlen aus Proxmox, Prometheus, Pi-hole, Home Assistant, Wetter oder Kalender.</div>{{end}}
+<h2>Was wohin gehört</h2>
+<dl class="eigenschaften">{{range .D.Arten}}<dt>{{.Name}}</dt><dd class="klein">{{.Hilfe}}</dd>{{end}}</dl>
+</div>
+<form method="post" action="/verwalten/widgets" class="karte">
+  <h2>{{if $w.ID}}Widget ändern{{else}}Neues Widget{{end}}</h2>
+  <input type="hidden" name="token" value="{{$t}}"><input type="hidden" name="id" value="{{$w.ID}}">
+  <label for="board">Board</label>
+  <select id="board" name="board">{{range .D.Boards}}<option value="{{.ID}}"{{if eq .ID $w.Board}} selected{{end}}>{{.Name}}</option>{{end}}</select>
+  <label for="art">Art</label>
+  <select id="art" name="art">{{range .D.Arten}}<option value="{{.Art}}"{{if eq .Art $w.Art}} selected{{end}}>{{.Name}}</option>{{end}}</select>
+  <label for="titel">Titel</label><input type="text" id="titel" name="titel" value="{{$w.Titel}}" required>
+  <label for="adresse">Adresse</label><input type="text" id="adresse" name="adresse" value="{{$w.Adresse}}" placeholder="https://host:port">
+  <label for="abfrage">Abfrage</label><input type="text" id="abfrage" name="abfrage" value="{{$w.Abfrage}}">
+  <label for="geheimnis">Name des Geheimnisses (nicht das Token)</label><input type="text" id="geheimnis" name="geheimnis" value="{{$w.Geheimnis}}" placeholder="PVE">
+  <p class="muted klein">PVE heißt: <span class="code">BOARDR_WIDGET_PVE</span> und <span class="code">BOARDR_WIDGET_PVE_ZIEL</span> in der .env. Ziel ist der einzige Host, der das Token bekommt.</p>
+  <label for="reihe">Reihenfolge</label><input type="number" id="reihe" name="reihe" value="{{$w.Reihe}}">
+  <div class="leiste knopfzeile"><button class="primaer">Speichern</button></div>
+</form>
+</div>
+{{end}}
+{{define "skripte"}}<script src="/statisch/verwalten.js" defer></script>{{end}}
