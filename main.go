@@ -17,9 +17,10 @@ import (
 )
 
 type App struct {
-	db  *pgxpool.Pool
-	sso *SSO
-	v   Vorlagen
+	admins []string // Vorgabe des Betreibers
+	db     *pgxpool.Pool
+	sso    *SSO
+	v      Vorlagen
 }
 
 func main() {
@@ -31,6 +32,8 @@ func main() {
 		sso: NeuesSSO("Boardr", umgebung("BOARDR_SSO_DATEI", "./einstellungen/sso.json"), "BOARDR_SSO_AUS"),
 		v:   ladeVorlagen(),
 	}
+	a.admins = adminListe(umgebung("BOARDR_ADMIN", ""))
+	a.sso.ErstesKonto = a.ersterAdmin
 	a.sso.Frei = []string{"/statisch/", "/healthz"}
 	if err := a.beispielAnlegen(ctx); err != nil {
 		log.Printf("Beispiel: %v", err)
